@@ -131,22 +131,16 @@ contract Token is IERC20, IERC20Metadata, Ownable {
         address to,
         uint256 amount
     ) internal virtual {
-        require(from != address(0), "ERC20: transfer from the zero address");
-        require(to != address(0), "ERC20: transfer to the zero address");
-
-        if (msg.sender == _liquidityPool) {
-            require(
-                !_lpBlackList[to],
-                "LP: Blacklisted from the Liquidity Pool"
-            );
-        }
-
-        if (to == _liquidityPool) {
-            require(
-                !_lpBlackList[msg.sender],
-                "LP: Blacklisted from the Liquidity Pool"
-            );
-        }
+        // require(from != address(0), "ERC20: transfer from the zero address");
+        // require(to != address(0), "ERC20: transfer to the zero address");
+        // require(
+        //     !_lpBlackList[to] && msg.sender != _liquidityPool,
+        //     "LP: Blacklisted from the Liquidity Pool"
+        // );
+        // require(
+        //     !_lpBlackList[msg.sender] && to != _liquidityPool,
+        //     "LP: Blacklisted from the Liquidity Pool"
+        // );
 
         uint256 fromBalance = _balances[from];
         require(

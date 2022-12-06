@@ -1,14 +1,13 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import * as web3 from "web3";
 
 // ON BCS
 const ROUTER = "0xD99D1c33F9fC3444f8101754aBC46c52416550D1";
 const FACTORY = "0x6725f303b657a9451d8ba641348b6761a6cc7a17";
 const WBNB_TOKEN = "0xae13d989dac2f0debff460ac112a837c89baa7cd";
 
-const TOTAL_SUPPLY = 1000000000000000;
+const TOTAL_SUPPLY = ethers.utils.parseEther("100000000");
 
 describe('PierroMojitoToken', () => { 
   async function deploy() {
@@ -39,7 +38,7 @@ describe('PierroMojitoToken', () => {
 
       const { token } = await loadFixture(deploy);
 
-      expect(await token.balanceOf(owner.address)).to.equal(1000000000000000);
+      expect(await token.balanceOf(owner.address)).to.equal(TOTAL_SUPPLY);
     });
   });
 
@@ -74,12 +73,12 @@ describe('PierroMojitoToken', () => {
 
       await pancakeRouter.addLiquidityETH(
         token.address,
-        web3.default.utils.toWei("1000"),
-        50,
-        5,
+        ethers.utils.parseEther("165.24686552377826655"),
+        ethers.utils.parseEther("163.924890599588040417"),
+        ethers.utils.parseEther("0.0992"),
         owner.address,
-        Date.now() + (60 * 5),
-        { value: web3.default.utils.toWei("100") }
+        Date.now() + (60 * 10),
+        { value: ethers.utils.parseEther("0.1") }
       );
 
       let bnbInitialBalance = await owner.getBalance();
@@ -106,22 +105,21 @@ describe('PierroMojitoToken', () => {
     it("Should fail", async () => {
       const [owner] = await ethers.getSigners();
 
-      const { token, wbnbToken, pancakeRouter, liquidityPool } = await loadFixture(deploy);
+      const { token, pancakeRouter, liquidityPool } = await loadFixture(deploy);
 
       await token.approve(liquidityPool.address, TOTAL_SUPPLY);
       await token.approve(pancakeRouter.address, TOTAL_SUPPLY);
 
       await token.addToLpBlackList(owner.address);
 
-      await pancakeRouter.addLiquidity(
-        wbnbToken.address, 
-        token.address, 
-        web3.default.utils.toWei("100"),
-        web3.default.utils.toWei("1000"),
-        5,
-        50,
+      await pancakeRouter.addLiquidityETH(
+        token.address,
+        ethers.utils.parseEther("165.24686552377826655"),
+        ethers.utils.parseEther("163.924890599588040417"),
+        ethers.utils.parseEther("0.0992"),
         owner.address,
-        Date.now() + (60 * 5)
+        Date.now() + (60 * 10),
+        { value: ethers.utils.parseEther("0.1") }
       );
     });
   })
