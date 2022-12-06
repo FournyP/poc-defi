@@ -26,14 +26,14 @@ async function main() {
   await token.approve(router.address, TOTAL_SUPPLY);
 
   let response = await router.addLiquidityETH(
-        token.address,
-        ethers.utils.parseEther("10"),
-        ethers.utils.parseEther("9"),
-        ethers.utils.parseEther("0.00992"),
-        owner.address,
-        Date.now() + (60 * 10),
-        { value: ethers.utils.parseEther("0.01"), gasLimit: 7600000 }
-      );
+    token.address,
+    ethers.utils.parseEther("10"),
+    ethers.utils.parseEther("9"),
+    ethers.utils.parseEther("0.00992"),
+    owner.address,
+    Date.now() + (60 * 10),
+    { value: ethers.utils.parseEther("0.01"), gasLimit: 7600000 }
+  );
 
   response.wait(1);
 
