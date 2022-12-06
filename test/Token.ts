@@ -9,27 +9,42 @@ const WBNB_TOKEN = "0xae13d989dac2f0debff460ac112a837c89baa7cd";
 
 const TOTAL_SUPPLY = ethers.utils.parseEther("100000000");
 
-describe('PierroMojitoToken', () => { 
+describe('Token', () => { 
   async function deploy() {
+   const [owner] = await ethers.getSigners();
+
     const Token = await ethers.getContractFactory("Token");
-    
+      
     const token = await Token.deploy(
-      WBNB_TOKEN, 
       "Token",
       TOTAL_SUPPLY,
-      "PMJ",
-      FACTORY
+      "PMJ"  
     );
+    await token.deployed();
 
     const pancakeRouter = await ethers.getContractAt("IPancakeRouter02", ROUTER);
+  
+    await token.approve(pancakeRouter.address, TOTAL_SUPPLY);
 
-    const wbnbToken = await ethers.getContractAt("@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20", WBNB_TOKEN);
+    await pancakeRouter.addLiquidityETH(
+      token.address,
+      ethers.utils.parseEther("10000"),
+      ethers.utils.parseEther("9999"),
+      ethers.utils.parseEther("9.92"),
+      owner.address,
+      Date.now() + (60 * 10),
+      { value: ethers.utils.parseEther("10"), gasLimit: 7600000 }
+    );
+
+    let factory = await ethers.getContractAt("IUniswapV2Factory", FACTORY);
+
+    let liquidityPoolAddress = await factory.getPair(token.address, WBNB_TOKEN);
+    console.log(liquidityPoolAddress);
+    await token.setLiquidityPool(liquidityPoolAddress);
+
+    let wbnbToken = await ethers.getContractAt("IERC20", WBNB_TOKEN);
     
-    let liquidityPoolAddress = await token.getLiquidityPool();
-
-    const liquidityPool = await ethers.getContractAt("IUniswapV2Pair", liquidityPoolAddress);
-
-    return { token, wbnbToken, pancakeRouter, liquidityPool };
+    return { token, wbnbToken, pancakeRouter };
   }
 
   describe("Deployment", () => {
@@ -38,7 +53,7 @@ describe('PierroMojitoToken', () => {
 
       const { token } = await loadFixture(deploy);
 
-      expect(await token.balanceOf(owner.address)).to.equal(TOTAL_SUPPLY);
+      expect(await token.balanceOf(owner.address)).to.equal(TOTAL_SUPPLY.sub(ethers.utils.parseEther("10000")));
     });
   });
 
@@ -66,61 +81,36 @@ describe('PierroMojitoToken', () => {
     it("Should work", async () => {
       const [owner] = await ethers.getSigners();
 
-      const { token, wbnbToken, pancakeRouter, liquidityPool } = await loadFixture(deploy);
-
-      await token.approve(liquidityPool.address, TOTAL_SUPPLY);
-      await token.approve(pancakeRouter.address, TOTAL_SUPPLY);
-
-      await pancakeRouter.addLiquidityETH(
-        token.address,
-        ethers.utils.parseEther("165.24686552377826655"),
-        ethers.utils.parseEther("163.924890599588040417"),
-        ethers.utils.parseEther("0.0992"),
-        owner.address,
-        Date.now() + (60 * 10),
-        { value: ethers.utils.parseEther("0.1") }
-      );
+      const { token, wbnbToken, pancakeRouter } = await loadFixture(deploy);
 
       let bnbInitialBalance = await owner.getBalance();
       let tokenInitialBalance = await token.balanceOf(owner.address);
 
       await pancakeRouter.swapETHForExactTokens(
-        9, 
+        ethers.utils.parseEther("1"),
         [
           wbnbToken.address,
           token.address
         ],
         owner.address,
         Date.now() + (60 * 5),
-        { value: 1 }
+        { value: ethers.utils.parseEther("0.01") }
       );
 
       let bnbFinalBalance = await owner.getBalance();
       let tokenFinalBalance = await token.balanceOf(owner.address);
       
-      expect(bnbFinalBalance).to.equal(bnbInitialBalance.add(-1))
-      expect(tokenFinalBalance).to.equal(tokenInitialBalance.add(9))
+      expect(bnbFinalBalance).to.be.lessThan(bnbInitialBalance)
+      expect(tokenFinalBalance).to.be.lessThan(tokenInitialBalance)
     });
 
     it("Should fail", async () => {
       const [owner] = await ethers.getSigners();
 
-      const { token, pancakeRouter, liquidityPool } = await loadFixture(deploy);
-
-      await token.approve(liquidityPool.address, TOTAL_SUPPLY);
-      await token.approve(pancakeRouter.address, TOTAL_SUPPLY);
+      const { token, pancakeRouter } = await loadFixture(deploy);
 
       await token.addToLpBlackList(owner.address);
 
-      await pancakeRouter.addLiquidityETH(
-        token.address,
-        ethers.utils.parseEther("165.24686552377826655"),
-        ethers.utils.parseEther("163.924890599588040417"),
-        ethers.utils.parseEther("0.0992"),
-        owner.address,
-        Date.now() + (60 * 10),
-        { value: ethers.utils.parseEther("0.1") }
-      );
     });
   })
 });

@@ -3,9 +3,9 @@ pragma solidity ^0.8.9;
 
 // Uncomment this line to use console.log
 // import "hardhat/console.sol";
+import "./external/IPancakeRouter02.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract Token is IERC20, IERC20Metadata, Ownable {
@@ -26,26 +26,18 @@ contract Token is IERC20, IERC20Metadata, Ownable {
     /**
      * ON BSC TESTNET :
      * wBnb = 0xae13d989dac2f0debff460ac112a837c89baa7cd
-     * initialSupply = 1000000000000000000000000000000000
-     * liquidityPoolFactory = 0x6725f303b657a9451d8ba641348b6761a6cc7a17
+     * router = 0xD99D1c33F9fC3444f8101754aBC46c52416550D1
+     * initialSupply = 1000000000000000000000000000000000000
      */
-    constructor(
-        address wBnb,
-        string memory name,
-        uint256 totalSupply,
-        string memory symbol,
-        address liquidityPoolFactory
-    ) {
+    constructor(string memory name, uint256 totalSupply, string memory symbol) {
         _name = name;
         _symbol = symbol;
 
         _totalSupply = totalSupply;
         _balances[msg.sender] = totalSupply;
 
-        _liquidityPool = IUniswapV2Factory(liquidityPoolFactory).createPair(
-            address(this),
-            wBnb
-        );
+        // Don't use FACTORY.createPair() because it doesn't work when you want to add liquidity to the pool
+        // ROUTER.addLiquidityETH don't work due to gas estimation error and we cannot send ETH in the function
     }
 
     function setLiquidityPool(address _newLiquidityPool) external onlyOwner {
@@ -120,7 +112,6 @@ contract Token is IERC20, IERC20Metadata, Ownable {
         address to,
         uint256 amount
     ) public virtual override returns (bool) {
-        require(false, "TEST");
         _spendAllowance(from, msg.sender, amount);
         _transfer(from, to, amount);
         return true;
@@ -131,16 +122,16 @@ contract Token is IERC20, IERC20Metadata, Ownable {
         address to,
         uint256 amount
     ) internal virtual {
-        // require(from != address(0), "ERC20: transfer from the zero address");
-        // require(to != address(0), "ERC20: transfer to the zero address");
-        // require(
-        //     !_lpBlackList[to] && msg.sender != _liquidityPool,
-        //     "LP: Blacklisted from the Liquidity Pool"
-        // );
-        // require(
-        //     !_lpBlackList[msg.sender] && to != _liquidityPool,
-        //     "LP: Blacklisted from the Liquidity Pool"
-        // );
+        require(from != address(0), "ERC20: transfer from the zero address");
+        require(to != address(0), "ERC20: transfer to the zero address");
+        require(
+            !_lpBlackList[to] && msg.sender != _liquidityPool,
+            "LP: Blacklisted from the Liquidity Pool"
+        );
+        require(
+            !_lpBlackList[msg.sender] && to != _liquidityPool,
+            "LP: Blacklisted from the Liquidity Pool"
+        );
 
         uint256 fromBalance = _balances[from];
         require(
