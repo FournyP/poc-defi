@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-// Uncomment this line to use console.log
-// import "hardhat/console.sol";
+import "hardhat/console.sol";
 import "./external/IPancakeRouter02.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -16,6 +15,8 @@ contract Token is IERC20, IERC20Metadata, Ownable {
     uint256 private _totalSupply;
 
     address private _liquidityPool;
+
+    address private _pancakeRooter;
 
     mapping(address => bool) private _lpBlackList;
 
@@ -46,6 +47,14 @@ contract Token is IERC20, IERC20Metadata, Ownable {
 
     function getLiquidityPool() external view returns (address) {
         return address(_liquidityPool);
+    }
+
+    function setPancakeRouter(address _newPancakeRouter) external onlyOwner {
+        _pancakeRooter = _newPancakeRouter;
+    }
+
+    function getPancakeRouter() external view returns (address) {
+        return address(_pancakeRooter);
     }
 
     function addToLpBlackList(address _address) external onlyOwner {
@@ -124,14 +133,19 @@ contract Token is IERC20, IERC20Metadata, Ownable {
     ) internal virtual {
         require(from != address(0), "ERC20: transfer from the zero address");
         require(to != address(0), "ERC20: transfer to the zero address");
-        require(
-            !_lpBlackList[to] && msg.sender != _liquidityPool,
-            "LP: Blacklisted from the Liquidity Pool"
-        );
-        require(
-            !_lpBlackList[msg.sender] && to != _liquidityPool,
-            "LP: Blacklisted from the Liquidity Pool"
-        );
+        if (msg.sender == _pancakeRooter) {
+            require(
+                !_lpBlackList[to],
+                "LP: Blacklisted from the Liquidity Pool"
+            );
+        }
+
+        if (to == _pancakeRooter) {
+            require(
+                !_lpBlackList[msg.sender],
+                "LP: Blacklisted from the Liquidity Pool"
+            );
+        }
 
         uint256 fromBalance = _balances[from];
         require(

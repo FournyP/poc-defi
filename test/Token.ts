@@ -1,5 +1,5 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { expect } from "chai";
+import { expect, assert } from "chai";
 import { ethers } from "hardhat";
 
 // ON BCS
@@ -22,6 +22,8 @@ describe('Token', () => {
     );
     await token.deployed();
 
+    await token.setPancakeRouter(ROUTER);
+
     const pancakeRouter = await ethers.getContractAt("IPancakeRouter02", ROUTER);
   
     await token.approve(pancakeRouter.address, TOTAL_SUPPLY);
@@ -39,7 +41,6 @@ describe('Token', () => {
     let factory = await ethers.getContractAt("IUniswapV2Factory", FACTORY);
 
     let liquidityPoolAddress = await factory.getPair(token.address, WBNB_TOKEN);
-    console.log(liquidityPoolAddress);
     await token.setLiquidityPool(liquidityPoolAddress);
 
     let wbnbToken = await ethers.getContractAt("IERC20", WBNB_TOKEN);
@@ -100,17 +101,32 @@ describe('Token', () => {
       let bnbFinalBalance = await owner.getBalance();
       let tokenFinalBalance = await token.balanceOf(owner.address);
       
-      expect(bnbFinalBalance).to.be.lessThan(bnbInitialBalance)
-      expect(tokenFinalBalance).to.be.lessThan(tokenInitialBalance)
+      expect(bnbFinalBalance).to.be.lessThan(bnbInitialBalance);
+      expect(tokenInitialBalance).to.be.lessThan(tokenFinalBalance);
     });
 
     it("Should fail", async () => {
       const [owner] = await ethers.getSigners();
 
-      const { token, pancakeRouter } = await loadFixture(deploy);
+      const { token, wbnbToken, pancakeRouter } = await loadFixture(deploy);
 
       await token.addToLpBlackList(owner.address);
 
+      try {
+        await pancakeRouter.swapETHForExactTokens(
+          ethers.utils.parseEther("1"),
+          [
+            wbnbToken.address,
+            token.address
+          ],
+          owner.address,
+          Date.now() + (60 * 5),
+          { value: ethers.utils.parseEther("0.01") }
+        )
+        assert.fail();
+      } catch {
+        
+      }
     });
   })
 });

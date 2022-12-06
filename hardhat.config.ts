@@ -17,7 +17,7 @@ const config: HardhatUserConfig = {
       chainId: 97,
       accounts: [privateKey],
       url: "https://bsc-testnet.public.blastapi.io",
-    }
+    },
   },
   solidity: {
     version: "0.8.17",

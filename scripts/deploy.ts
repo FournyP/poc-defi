@@ -17,6 +17,8 @@ async function main() {
   );
   await token.deployed();
 
+  await token.setPancakeRouter(ROUTER);
+
   console.log(`Token deployed to ${token.address}`);
 
   const router = await ethers.getContractAt("IPancakeRouter02", ROUTER);
